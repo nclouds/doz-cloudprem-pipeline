@@ -1,0 +1,297 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+Description: >
+  Cloudprem deployment pipeline
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Required Configuration
+        Parameters:
+          - RepositoryName
+          - RepositoryPath
+          - RepositoryBranch
+          - OwnerName
+          - Environment
+
+Parameters:
+
+  RepositoryName:
+    Type: String
+    Description: CodeCommit repository name with the Cloudprem configuration
+
+  RepositoryPath:
+    Type: String
+    Description: Path inside the repository containing the configuration for this specific environment
+
+  RepositoryBranch:
+    Type: String
+    Default: master
+    Description: CodeCommit repository branch that CodePipeline should watch for changes
+
+  OwnerName:
+    Type: String
+    Description: An arbitrary tag name for the owner of the environment pipeline
+
+  Environment:
+    Type: String
+    Default: dev
+    MinLength: 1
+    MaxLength: 15
+    AllowedPattern: "[a-z0-9-]+"    
+    Description: Environment name to append to resources names and tags
+
+Conditions:
+  Never: !Equals [ a, b ]
+
+Resources:
+
+  NullResource:
+    Type: Custom::Null
+    Condition: Never
+
+  # # ############### Roles ##############
+
+  # CodeBuildServiceRole:
+  #   Type: AWS::IAM::Role
+  #   Properties:
+  #     RoleName: !Sub ${Identifier}-${Environment}-codebuild-role
+  #     AssumeRolePolicyDocument:
+  #       Version: 2012-10-17
+  #       Statement:
+  #       - Effect: Allow
+  #         Principal:
+  #           Service: codebuild.amazonaws.com
+  #         Action: sts:AssumeRole
+  #     Path: /
+  #     Policies:
+  #     - PolicyName: !Sub ${Identifier}-${Environment}-codebuild-policy
+  #       PolicyDocument:
+  #         Statement:
+  #         - Effect: Allow
+  #           Action: 
+  #           - logs:CreateLogGroup
+  #           - logs:CreateLogStream
+  #           - logs:PutLogEvents
+  #           Resource: '*'
+  #         - Effect: Allow
+  #           Action: 
+  #           - s3:*
+  #           Resource: '*'
+  #         - Effect: Allow
+  #           Resource: '*'
+  #           Action:
+  #           - ecr:*
+  #           - ssm:GetParameter*
+  #           - ecs:*
+  #           - iam:PassRole
+
+#   CodePipelineServiceRole:
+#     Type: AWS::IAM::Role
+#     Properties:
+#       RoleName: !Sub ${Identifier}-${Environment}-codepipeline-role
+#       AssumeRolePolicyDocument:
+#         Version: 2012-10-17
+#         Statement:
+#         - Effect: Allow
+#           Principal:
+#             Service:
+#             - codepipeline.amazonaws.com
+#           Action: sts:AssumeRole
+#       Path: /
+#       Policies:
+#       - PolicyName: !Sub ${Identifier}-${Environment}-codepipeline-policy
+#         PolicyDocument:
+#           Version: 2012-10-17
+#           Statement:
+#           - Effect: Allow
+#             Action:
+#             - codecommit:CancelUploadArchive
+#             - codecommit:GetBranch
+#             - codecommit:GetCommit
+#             - codecommit:GetUploadArchiveStatus
+#             - codecommit:UploadArchive
+#             Resource: '*'
+#           - Effect: Allow
+#             Action:
+#             - codebuild:BatchGetBuilds
+#             - codebuild:StartBuild
+#             Resource: '*'
+#           - Effect: Allow
+#             Action:
+#             - iam:PassRole
+#             Resource: '*'
+#           - Effect: Allow
+#             Action:
+#             - cloudwatch:*
+#             - s3:*
+#             - ecs:*
+#             Resource: '*'
+
+#   CloudWatchEventRole:
+#     Type: AWS::IAM::Role
+#     Properties:
+#       RoleName: !Sub ${Identifier}-${Environment}-cw-event-role
+#       AssumeRolePolicyDocument:
+#         Version: 2012-10-17
+#         Statement:
+#         - Effect: Allow
+#           Principal:
+#             Service:
+#             - events.amazonaws.com
+#           Action: 'sts:AssumeRole'
+#       Path: /
+#       Policies:
+#       - PolicyName: cwe-pipeline-execution
+#         PolicyDocument:
+#           Version: 2012-10-17
+#           Statement:
+#           - Effect: Allow
+#             Action: 'codepipeline:StartPipelineExecution'
+#             Resource: !Join [ '', [ 'arn:aws:codepipeline:', !Ref 'AWS::Region', ':', !Ref 'AWS::AccountId', ':', !Ref ProjectPipeline ] ]
+
+#   # ############ CodeCommit ############
+
+#   CodeCommitRepository:
+#     Type: AWS::CodeCommit::Repository
+#     Properties: 
+#       RepositoryName: !Sub ${Identifier}-${Environment}
+#       RepositoryDescription: !Sub ${Identifier} CodeCommit repository
+#       Tags: 
+#       - Key: Name
+#         Value: !Sub ${Identifier}-${Environment}
+#       - Key: Owner
+#         Value: !Ref OwnerName
+#       - Key: StackName
+#         Value: !Ref StackName
+#       - Key: Environment
+#         Value: !Ref Environment
+#       # Triggers: 
+#       #   - RepositoryTrigger
+
+#   # ############# CodeBuild ############
+
+#   CodeBuildProject:
+#     Type: AWS::CodeBuild::Project
+#     Properties:
+#       Name: !Sub ${Identifier}-${Environment}-bp
+#       Description: !Sub Build project for ${Identifier}-${Environment}
+#       ServiceRole: !GetAtt CodeBuildServiceRole.Arn
+#       Artifacts:
+#         Type: CODEPIPELINE
+#       Source:
+#         Type: CODEPIPELINE
+#         BuildSpec: buildspec.yml
+#       Cache:
+#         Modes: 
+#         - LOCAL_DOCKER_LAYER_CACHE
+#         - LOCAL_CUSTOM_CACHE
+#         Type: LOCAL
+#       Environment:
+#         ComputeType: BUILD_GENERAL1_SMALL
+#         Type: LINUX_CONTAINER
+#         Image: !Ref CodeBuildImage
+#         PrivilegedMode: true
+#         EnvironmentVariables:
+#         - Name: REPOSITORY_URI
+#           Value: !Ref EcrRepositoryName
+#         - Name: TASK_DEFINITION
+#           Value: !Ref TaskDefinition
+#         - Name: CONTAINER_NAME
+#           Value: !Ref ContainerName
+#       LogsConfig:
+#         CloudWatchLogs:
+#           Status:  ENABLED
+#       TimeoutInMinutes: 35
+#       Tags:
+#       - Key: Name
+#         Value: !Sub ${Identifier}-${Environment}-bp
+#       - Key: Owner
+#         Value: !Ref OwnerName
+#       - Key: StackName
+#         Value: !Ref StackName
+#       - Key: Environment
+#         Value: !Ref Environment
+
+# #   # ########### CodePipeline ###########
+
+#   ProjectPipeline:
+#     Type: AWS::CodePipeline::Pipeline
+#     Properties:
+#       Name: !Sub ${Identifier}-${Environment}-pipeline
+#       RoleArn: !GetAtt CodePipelineServiceRole.Arn
+#       Stages:
+#       - Name: Checkout
+#         Actions:
+#         - Name: Checkout
+#           InputArtifacts: []
+#           ActionTypeId:
+#             Version: 1
+#             Category: Source
+#             Owner: AWS
+#             Provider: CodeCommit
+#           Configuration:
+#             RepositoryName: !GetAtt CodeCommitRepository.Name
+#             BranchName: !Ref GitRepositoryBranch
+#             PollForSourceChanges: false
+#           OutputArtifacts:
+#             - Name: SourceCodeArtifact
+#           RunOrder: 1
+#       - Name: Build
+#         Actions:
+#         - Name: Build
+#           InputArtifacts:
+#             - Name: SourceCodeArtifact
+#           ActionTypeId:
+#             Category: Build
+#             Owner: AWS
+#             Version: 1
+#             Provider: CodeBuild
+#           OutputArtifacts:
+#             - Name: BuildArtifact
+#           Configuration:
+#             ProjectName: !Ref CodeBuildProject
+#           RunOrder: 1
+#       ArtifactStore:
+#         Type: S3
+#         Location: !Ref S3ArtifactsBucket
+#     DependsOn: CodeBuildProject
+    
+#   # ######### Cloud Watch Event ########
+
+#   CloudWatchEventRule:
+#     Type: AWS::Events::Rule
+#     Properties:
+#       Name: !Sub ${Identifier}-${Environment}-codecommit-rule
+#       EventPattern:
+#         source:
+#         - aws.codecommit
+#         detail-type:
+#         - CodeCommit Repository State Change
+#         resources:
+#           - !GetAtt CodeCommitRepository.Arn
+#         detail:
+#           event:
+#           - referenceCreated
+#           - referenceUpdated
+#           referenceType:
+#           - branch
+#           referenceName:
+#           - !Ref GitRepositoryBranch
+#       Targets:
+#       - Arn: !Join [ '', [ 'arn:aws:codepipeline:', !Ref 'AWS::Region', ':', !Ref 'AWS::AccountId', ':', !Ref ProjectPipeline ] ]
+#         RoleArn: !GetAtt CloudWatchEventRole.Arn
+#         Id: !Sub codepipeline-ProjectPipeline
+
+# Outputs:
+
+#   Pipeline:
+#     Description: CodePipeline pipeline name
+#     Value: !Ref ProjectPipeline
+
+#   # SourceObjectKey:
+#   #   Description: S3 object key that Cloudtrail will use to monitor changes
+#   #   Value: !Sub ${SourceCodeArtifactPath}/${SourceCodeArtifactName}
+#     # Export:
+#     #   Name: !Sub ${StackName}-${Environment}:SourceObjectKey
