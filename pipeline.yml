@@ -19,6 +19,7 @@ Parameters:
 
   RepositoryPath:
     Type: String
+    Default: development
     Description: Path inside the repository containing the configuration for this specific environment
 
   RepositoryBranch:
@@ -167,16 +168,13 @@ Resources:
             build:
               commands:
               - cd ${RepositoryPath}
-              - terragrunt plan -out ${!CODEBUILD_SRC_DIR}/plan.json
-              - 'export PLAN_LOGS=$(terragrunt show ${!CODEBUILD_SRC_DIR}/plan.json -no-color | grep "Plan: ")'
+              - terragrunt plan -out plan.json
+              - 'export PLAN_LOGS=$(terragrunt show plan.json -no-color | grep "Plan: ")'
               - echo "$PLAN_LOGS"
           env:
             exported-variables:
               - PLAN_LOGS
             shell: bash
-          artifacts:
-            files:
-              - plan.json
       Environment:
         ComputeType: BUILD_GENERAL1_SMALL
         Type: LINUX_CONTAINER
@@ -223,7 +221,8 @@ Resources:
                 - wget -O /bin/terragrunt https://github.com/gruntwork-io/terragrunt/releases/download/v0.26.4/terragrunt_linux_amd64 && chmod +x /bin/terragrunt
             build:
               commands:
-              - terragrunt apply -auto-approve plan.json
+              - cd ${RepositoryPath}
+              - terragrunt apply -auto-approve
       Environment:
         ComputeType: BUILD_GENERAL1_SMALL
         Type: LINUX_CONTAINER
@@ -295,26 +294,21 @@ Resources:
             Provider: Manual
           Configuration:
             CustomData: !Sub |
-              Please review the following deployment:
-              Message: #{SourceVariables.CommitMessage}
-
               #{BuildVariables.PLAN_LOGS}
-
-              Please review the full plan in the link below
             ExternalEntityLink: !Sub https://console.aws.amazon.com/codesuite/codebuild/${AWS::AccountId}/projects/${TfPlanCodeBuildProject}/build/${TfPlanCodeBuildProject}:#{codepipeline.PipelineExecutionId}
           RunOrder: 1
       - Name: Apply
         Actions:
         - Name: Apply
           InputArtifacts:
-            - Name: PlanArtifact
+            - Name: SourceCodeArtifact
           ActionTypeId:
             Category: Build
             Owner: AWS
             Version: 1
             Provider: CodeBuild
           OutputArtifacts:
-            - Name: BuildArtifact
+            - Name: ApplyArtifact
           Configuration:
             ProjectName: !Ref TfApplyCodeBuildProject
           RunOrder: 1
