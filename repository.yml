@@ -17,6 +17,7 @@ Parameters:
 
   RepositoryName:
     Type: String
+    Default: cloudprem
     Description: CodeCommit repository name with the Cloudprem configuration
 
   OwnerName:
