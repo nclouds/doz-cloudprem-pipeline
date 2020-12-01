@@ -1,0 +1,84 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+Description: >
+  Cloudprem deployment pipeline
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Required Configuration
+        Parameters:
+          - RepositoryName
+          - OwnerName
+          - Environment
+
+Parameters:
+
+  RepositoryName:
+    Type: String
+    Description: CodeCommit repository name with the Cloudprem configuration
+
+  OwnerName:
+    Type: String
+    Description: An arbitrary tag name for the owner of the environment pipeline
+
+Conditions:
+
+  Never: !Equals [ a, b ]
+
+Resources:
+
+  NullResource:
+    Type: Custom::Null
+    Condition: Never
+
+  CodeCommitRepository:
+    Type: AWS::CodeCommit::Repository
+    Properties: 
+      RepositoryName: !Ref RepositoryName
+      RepositoryDescription: !Sub cloudprem CodeCommit repository
+      Code:
+        BranchName: master
+        S3:
+          Bucket: nclouds-cloudprem-assets
+          Key: cloudprem-live.zip
+      Tags: 
+      - Key: Name
+        Value: !Sub cloudprem
+      - Key: Owner
+        Value: !Ref OwnerName
+
+  S3ArtifactsBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      BucketName: !Sub cloudprem-codepipeline-${AWS::AccountId}
+      VersioningConfiguration:
+        Status: Enabled
+
+Outputs:
+
+  RepositoryName:
+    Description: CodeCommit repository name
+    Value: !GetAtt CodeCommitRepository.Name
+    Export:
+      Name: cloudprem-repository-name
+
+  RepositoryArn:
+    Description: CodeCommit repository ARN
+    Value: !GetAtt CodeCommitRepository.Arn
+    Export:
+      Name: cloudprem-repository-arn
+
+  BucketName:
+    Description: Codepipeline artifcats S3 bucket name
+    Value: !Ref S3ArtifactsBucket
+    Export:
+      Name: !Sub cloudprem-bucket-name
+
+  BucketArn:
+    Description: Codepipeline artifcats S3 bucket ARN
+    Value: !GetAtt S3ArtifactsBucket.Arn
+    Export:
+      Name: !Sub cloudprem-bucket-arn
