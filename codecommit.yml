@@ -6,12 +6,11 @@ Description: >
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
-      - Label:
-          default: Required Configuration
-        Parameters:
-          - RepositoryName
-          - OwnerName
-          - Environment
+    - Label:
+        default: Required Configuration
+      Parameters:
+      - RepositoryName
+      - OwnerName
 
 Parameters:
 
