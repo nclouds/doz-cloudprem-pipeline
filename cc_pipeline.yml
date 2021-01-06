@@ -180,7 +180,7 @@ Resources:
             build:
               commands:
               - cd ${RepositoryPath}
-              - terragrunt init
+              - terragrunt init --terragrunt-non-interactive
               - terragrunt plan -out plan.json
               - 'export PLAN_LOGS=$(terragrunt show plan.json -no-color | grep "Plan: ")'
               - echo "$PLAN_LOGS"
@@ -232,7 +232,7 @@ Resources:
             build:
               commands:
               - cd ${RepositoryPath}
-              - terragrunt init
+              - terragrunt init --terragrunt-non-interactive
               - terragrunt apply -auto-approve
       Environment:
         ComputeType: BUILD_GENERAL1_SMALL
