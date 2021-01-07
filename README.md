@@ -50,7 +50,7 @@ For the Github pipeline you need to perform the following steps:
 
 1. Deploy the *Cloudprem Codestar* CloudFormation stack.
 
-2. Go to the [Codestar console](https://us-west-2.console.aws.amazon.com/codesuite/codestar/projects) for the AWS region you are using, select the *cloudprem-github* connection and click on "Update connection". This will ask you to enter your Github credentials to complete the setup
+2. Go to the [Codestar console](https://us-west-2.console.aws.amazon.com/codesuite/settings/connections) for the AWS region you are using, select the *cloudprem-github* connection and click on "Update connection". This will ask you to enter your Github credentials to complete the setup
 
 3. Deploy the *Cloudprem Github Pipeline* Stack for each of your environments.
 

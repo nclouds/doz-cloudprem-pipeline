@@ -17,7 +17,7 @@ Parameters:
     Type: String
     Default: cloudprem
     Description: Github repository name with the Cloudprem configuration. The Repository name must be in the Owner/Repo format
-    AllowedPattern: "[a-z0-9-]+/[a-z0-9-]+"  
+    # AllowedPattern: "[a-z0-9-]+/[a-z0-9-]+"  
 
   OwnerName:
     Type: String
