@@ -181,12 +181,17 @@ Resources:
               commands:
               - cd ${RepositoryPath}
               - terragrunt init --terragrunt-non-interactive
-              - terragrunt plan -out plan.json
-              - 'export PLAN_LOGS=$(terragrunt show plan.json -no-color | grep "Plan: ")'
+              - terragrunt plan -out $CODEBUILD_SRC_DIR/plan.json
+              - 'export PLAN_LOGS=$(terragrunt show $CODEBUILD_SRC_DIR/plan.json -no-color | grep "Plan: ")'
               - echo "$PLAN_LOGS"
+          artifacts:
+            discard-paths: yes
+            files:
+              - $CODEBUILD_SRC_DIR/plan.json
           env:
             exported-variables:
               - PLAN_LOGS
+              - CODEBUILD_BUILD_ID
             shell: bash
       Environment:
         ComputeType: BUILD_GENERAL1_SMALL
@@ -233,7 +238,7 @@ Resources:
               commands:
               - cd ${RepositoryPath}
               - terragrunt init --terragrunt-non-interactive
-              - terragrunt apply -auto-approve
+              - terragrunt apply $CODEBUILD_SRC_DIR_PlanArtifact/plan.json
       Environment:
         ComputeType: BUILD_GENERAL1_SMALL
         Type: LINUX_CONTAINER
@@ -306,13 +311,14 @@ Resources:
           Configuration:
             CustomData: !Sub |
               #{BuildVariables.PLAN_LOGS}
-            ExternalEntityLink: !Sub https://console.aws.amazon.com/codesuite/codebuild/${AWS::AccountId}/projects/${TfPlanCodeBuildProject}/build/${TfPlanCodeBuildProject}:#{codepipeline.PipelineExecutionId}
+            ExternalEntityLink: !Sub https://${AWS::Region}.console.aws.amazon.com/codesuite/codebuild/${AWS::AccountId}/projects/${TfPlanCodeBuildProject}/build/#{BuildVariables.CODEBUILD_BUILD_ID}
           RunOrder: 1
       - Name: Apply
         Actions:
         - Name: Apply
           InputArtifacts:
             - Name: SourceCodeArtifact
+            - Name: PlanArtifact
           ActionTypeId:
             Category: Build
             Owner: AWS
@@ -322,6 +328,7 @@ Resources:
             - Name: ApplyArtifact
           Configuration:
             ProjectName: !Ref TfApplyCodeBuildProject
+            PrimarySource: SourceCodeArtifact
           RunOrder: 1
       ArtifactStore:
         Type: S3
