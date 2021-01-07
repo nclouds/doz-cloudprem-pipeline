@@ -1,0 +1,79 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+Description: >
+  Cloudprem CodeStart Github connection
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: Required Configuration
+      Parameters:
+      - OwnerName
+
+Parameters:
+
+  RepositoryName:
+    Type: String
+    Default: cloudprem
+    Description: Github repository name with the Cloudprem configuration. The Repository name must be in the Owner/Repo format
+    AllowedPattern: "[a-z0-9-]+/[a-z0-9-]+"  
+
+  OwnerName:
+    Type: String
+    Description: An arbitrary tag name for the owner of the environment pipeline
+
+Conditions:
+
+  Never: !Equals [ a, b ]
+
+Resources:
+
+  NullResource:
+    Type: Custom::Null
+    Condition: Never
+
+  GithubConnection:
+    Type: AWS::CodeStarConnections::Connection
+    Properties: 
+      ConnectionName: cloudprem-github
+      ProviderType: GitHub
+      Tags: 
+      - Key: Name
+        Value: cloudprem-github
+      - Key: Owner
+        Value: !Ref OwnerName
+
+  S3ArtifactsBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      BucketName: !Sub cloudprem-codepipeline-${AWS::AccountId}
+      VersioningConfiguration:
+        Status: Enabled
+
+Outputs:
+
+  CodeStarConnectionArn:
+    Description: CodeStar Github connection ARN
+    Value: !Ref GithubConnection
+    Export:
+      Name: cloudprem-codestar-connection-arn
+  
+  RepositoryName:
+    Description: Github repository name
+    Value: !Ref RepositoryName
+    Export:
+      Name: cloudprem-repository-name
+
+  BucketName:
+    Description: Codepipeline artifcats S3 bucket name
+    Value: !Ref S3ArtifactsBucket
+    Export:
+      Name: !Sub cloudprem-bucket-name
+
+  BucketArn:
+    Description: Codepipeline artifcats S3 bucket ARN
+    Value: !GetAtt S3ArtifactsBucket.Arn
+    Export:
+      Name: !Sub cloudprem-bucket-arn
