@@ -2,62 +2,50 @@
 
 This repository contains the CloudFormation templates for the CloudPrem distribution pipelines. The pipelines use CodeBuild and CodePipeline to automate the deployment of the CloudPrem Terraform infrastructure.
 
-There are two options for your Cloudprem deployment mechanism, a managed and a custom version:
+The pipelines infrastructure is defined across two CloudFormation templates:
+1. Cloudprem CodePipeline: Contains shared resources and configurations for CodePipeline
+2. Cloudprem Pipeline: Contains the resources for a deployment pipeline for a specific environment
 
-### Managed Pipeline
+### Cloudprem Codepipeline [![launch_stack](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=cloudprem-codepipeline&templateURL=https://s3.amazonaws.com/nclouds-cloudprem-assets/codepipeline_app.yml)
 
-With the managed Cloudprem pipeline, you will use the pre-defined parameters managed and configured by Dozuki for each of the defined environments. In this case you will not be able to overwrite any of those parameters as the infrastructure configuration will be managed by Dozuki. The diagram below represents the architecture of the pipeline:
+The Cloudprem CodePipeline stack should be deployed once in every region you intend to deploy the CloudPrem infrastructure. This stack will create a Serverless Application which in turn creates an S3 artifacts bucket for CodePipeline as well as a custom source action to pull the source code from any git repository. The stack creates some stack exports that will be used by the Cloudprem pipelines.
 
-![distribution-pipeline-s3](https://app.lucidchart.com/publicSegments/view/07ae6aa6-5e42-40a3-8f20-3b3edf056286/image.png)
-
-To deploy the pipeline click on the following Launch Stack button and follow the steps in the AWS console filling the required parameters.
-
-| Stack  | Launch  |
-|---|---|
-| Cloudprem Managed Pipeline  |  [![launch_stack](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=cloudprem-pipeline-dev&templateURL=https://s3.amazonaws.com/nclouds-cloudprem-assets/s3_pipeline.yml) |
-
-You can create as many pipelines as you require for each of your environments, just keep in mind that you will require a different license file for each environment.
-
-### Custom Pipeline
-
-With the custom Cloudprem pipeline, a git repository with the parameters for your infrastructure will be used. In this case you have the options to configure your infrastructure with the parameters required for each of your environments. We offer two options for the custom pipeline: Using CodeCommit or a Github repository.
-
-#### CodeCommit
-
-The diagram below represents the architecture of the pipeline:
-
-![distribution-pipeline-s3](https://app.lucidchart.com/publicSegments/view/b5bb6ea2-f6e3-4145-ba26-1c8dfda53f7a/image.png)
-
-For the CodeCommit pipeline you need to perform two steps:
-
-1. Deploy the *Cloudprem Repository* CloudFormation stack.
-
-2. Deploy the *Cloudprem CodeCommit Pipeline* Stack for each of your environments.
+| Parameter            | Description                                                                          | Default | Required |
+|----------------------|--------------------------------------------------------------------------------------|---------|----------|
+| SourceActionVersion  | Version of the custom source action for CodePipeline. Update the version if required | 1       | no       |
+| SourceActionProvider | Provider name of the custom source action for CodePipeline                           | Git     | no       |
+| OwnerName            | An arbitrary tag name for the owner of the Stack                                     |         | yes      |
 
 
-| Stack  | Launch  |
-|---|---|
-| CloudPrem Repository  |  [![launch_stack](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=cloudprem-repository&templateURL=https://s3.amazonaws.com/nclouds-cloudprem-assets/codecommit.yml) |
-| CloudPrem CodeCommit Pipeline   |  [![launch_stack](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=cloudprem-pipeline-dev&templateURL=https://s3.amazonaws.com/nclouds-cloudprem-assets/cc_pipeline.yml) |
+### Cloudprem Pipeline [![launch_stack](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=cloudprem-pipeline-dev&templateURL=https://s3.amazonaws.com/nclouds-cloudprem-assets/git_pipeline.yml)
 
-#### Github
+The Cloudprem Pipeline stack should be deployed once per environment. It deploys the actual pipeline as well as the CodeBuild projects for the pipeline execution.
 
-The diagram below represents the architecture of the pipeline:
+![distribution-pipeline-git](https://app.lucidchart.com/publicSegments/view/d764e658-a737-4656-bd90-a6a2ea69f891/image.png)
 
-![distribution-pipeline-gh](https://app.lucidchart.com/publicSegments/view/fec46c8d-2253-47f2-98d4-57c923307f61/image.png)
+| Parameter        | Description                                                                                                                                | Default                                                | Required |
+|------------------|--------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------|----------|
+| DozukiLicense    | The contents of the .rli license file provided by Dozuki                                                                                   |                                                        | yes      |
+| RepositoryUrl    | SSH/HTTP URL of the git repository containing the Cloudprem parameters                                                                     | https://github.com/nclouds/doz-infrastructure-live.git | no       |
+| RepositoryBranch | Branch that contains the Cloudprem parameters                                                                                              | main                                                   | no       |
+| RepositoryPath   | Path inside the git repository that contains the Cloudprem parameters for this environment. Don't use the same path for multiple pipelines | development                                            | no       |
+| OverrideDefaults | Override 'Region' and 'Environment' parameters from the repository with the current template parameters                                    | true                                                   | no       |
+| PipelineAction   | Action that the pipeline will execute. Apply will create or update the resources and destroy will delete the Terraform stack               | Apply                                                  | no       |
+| WebhookSecret    |                                                                                                                                            |                                                        |          |
+| OwnerName        | An arbitrary tag name for the owner of the environment pipeline                                                                            |                                                        | yes      |
+| Environment      | Environment name to append to resources names and tags                                                                                     | dev                                                    | no       |
 
-For the Github pipeline you need to perform the following steps:
+The pipeline supports two types of repositories, public and private:
 
-1. Deploy the *Cloudprem Codestar* CloudFormation stack.
+#### Public
 
-2. Go to the [Codestar console](https://us-west-2.console.aws.amazon.com/codesuite/settings/connections) for the AWS region you are using, select the *cloudprem-github* connection and click on "Update connection". This will ask you to enter your Github credentials to complete the setup
+For public repositories you should use the **https** URL of the git repository. Then no further action is needed. The default repository is the Dozuki repository which contains the recommended parameters by Dozuki. If you want to customize the parameters used for your stack copy the repository and update the input values for each environment.
 
-3. Deploy the *Cloudprem Github Pipeline* Stack for each of your environments.
+#### Private
 
+For private repositories you must use the **ssh** URL of the git repository. To authenticate you must add the SSH key to your user keys:
 
-| Stack  | Launch  |
-|---|---|
-| CloudPrem Repository  |  [![launch_stack](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=cloudprem-repository&templateURL=https://s3.amazonaws.com/nclouds-cloudprem-assets/codecommit.yml) |
-| CloudPrem Github Pipeline   |  [![launch_stack](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=cloudprem-pipeline-dev&templateURL=https://s3.amazonaws.com/nclouds-cloudprem-assets/github_pipeline.yml) |
+1. Go to the *Cloudprem CodePipeline* Stack that you previously deployed and in the outputs tab, copy the public ssh key.
+2. Go to your user settings and choose SSH and GPG Keys. Add a new SSH key with the PublicSSHKey value from AWS CloudFormation.
 
-*(Notes: Make sure to use the same environment name on the CloudFormation template and the Terraform parameters)*
+*(Notes: If you are not using the 'OverrideDefaults' setting Make sure to use the same environment name on the CloudFormation template and the Terraform parameters. The cloudformation template creates an SSM parameter with a specific name that must be used by Terraform so make sure you set the value correctly)*

@@ -41,7 +41,7 @@ Parameters:
 
   OwnerName:
     Type: String
-    Description: An arbitrary tag name for the owner of the environment pipeline
+    Description: An arbitrary tag name for the owner of the Stack
 
 Globals:
 
