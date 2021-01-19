@@ -47,7 +47,7 @@ For public repositories you should use the **https** URL of the git repository. 
 
 #### Private
 
-For private repositories you must use the **ssh** URL of the git repository. To authenticate you must add the SSH key to your user keys:
+For private repositories you must use the **ssh** URL of the git repository. The Stack will create a pair of SSH keys to authenticate, you must add the public key to your user authorized keys:
 
 1. Go to the *Cloudprem CodePipeline* Stack that you previously deployed and in the outputs tab, copy the public ssh key.
 2. Go to your user settings and choose SSH and GPG Keys. Add a new SSH key with the PublicSSHKey value from AWS CloudFormation.
