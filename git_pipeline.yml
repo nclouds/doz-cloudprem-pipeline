@@ -34,7 +34,18 @@ Parameters:
   RepositoryPath:
     Type: String
     Default: development
-    Description: Path inside the git repository that contains the Cloudprem parameters for this environment
+    Description: Path inside the git repository that contains the Cloudprem parameters for this environment. Don't use the same path for multiple pipelines
+
+  OverrideDefaults:
+    Type: String
+    Default: true
+    Description: Override 'Region' and 'Environment' parameters from the repository with the current template parameters
+
+  PipelineAction:
+    Type: String
+    Default: Apply
+    AllowedValues: [ Apply, Destroy ]
+    Description: Action that the pipeline will execute. Apply will create or update the resources and destroy will delete the Terraform stack
 
   OwnerName:
     Type: String
@@ -47,13 +58,12 @@ Parameters:
       Environment name to append to resources names and tags.
 
 Conditions:
-  Never: !Equals [ a, b ]
+
+  OverrideDefaults: !Equals [ !Ref OverrideDefaults, true ]
+
+  DestroyResources: !Equals [ !Ref PipelineAction, 'Destroy' ]
 
 Resources:
-
-  NullResource:
-    Type: Custom::Null
-    Condition: Never
 
   DozukiLicenseParameter:
     Type: AWS::SSM::Parameter
@@ -68,7 +78,7 @@ Resources:
   CodeBuildServiceRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub cloudprem-${Environment}-codebuild
+      RoleName: !Sub cloudprem-${Environment}-${AWS::Region}-codebuild
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -77,7 +87,7 @@ Resources:
             Service: codebuild.amazonaws.com
           Action: sts:AssumeRole
       Policies:
-      - PolicyName: !Sub cloudprem-${Environment}-codebuild
+      - PolicyName: !Sub cloudprem-${Environment}-${AWS::Region}-codebuild
         PolicyDocument:
           Statement:
           - Effect: Allow
@@ -98,7 +108,7 @@ Resources:
   CodePipelineServiceRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub cloudprem-${Environment}-codepipeline
+      RoleName: !Sub cloudprem-${Environment}-${AWS::Region}-codepipeline
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -108,7 +118,7 @@ Resources:
             - codepipeline.amazonaws.com
           Action: sts:AssumeRole
       Policies:
-      - PolicyName: !Sub cloudprem-${Environment}-codepipeline
+      - PolicyName: !Sub cloudprem-${Environment}-${AWS::Region}-codepipeline
         PolicyDocument:
           Version: 2012-10-17
           Statement:
@@ -147,31 +157,40 @@ Resources:
         Type: CODEPIPELINE
       Source:
         Type: CODEPIPELINE
-        BuildSpec: !Sub |
-          version: 0.2
-          phases:
-            install:
-              runtime-versions:
-                golang: 1.14
-              commands:
-                - wget -O terraform.zip https://releases.hashicorp.com/terraform/0.14.3/terraform_0.14.3_linux_amd64.zip && unzip terraform.zip && mv terraform /bin && rm terraform.zip
-                - wget -O /bin/terragrunt https://github.com/gruntwork-io/terragrunt/releases/download/v0.26.4/terragrunt_linux_amd64 && chmod +x /bin/terragrunt
-            build:
-              commands:
-              - cd ${RepositoryPath}
-              - terragrunt init --terragrunt-non-interactive
-              - terragrunt plan -out $CODEBUILD_SRC_DIR/plan.json -var 'region=${AWS::Region}' -var 'environment=${Environment}'
-              - 'export PLAN_LOGS=$(terragrunt show $CODEBUILD_SRC_DIR/plan.json -no-color | grep "Plan: ")'
-              - echo "$PLAN_LOGS"
-          artifacts:
-            discard-paths: yes
-            files:
-              - $CODEBUILD_SRC_DIR/plan.json
-          env:
-            exported-variables:
-              - PLAN_LOGS
-              - CODEBUILD_BUILD_ID
-            shell: bash
+        BuildSpec: !Sub        
+          - |
+            version: 0.2
+            phases:
+              install:
+                runtime-versions:
+                  golang: 1.14
+                commands:
+                  - wget -O terraform.zip https://releases.hashicorp.com/terraform/0.14.4/terraform_0.14.4_linux_amd64.zip && unzip terraform.zip && mv terraform /bin && rm terraform.zip
+                  - wget -O /bin/terragrunt https://github.com/gruntwork-io/terragrunt/releases/download/v0.26.4/terragrunt_linux_amd64 && chmod +x /bin/terragrunt
+              build:
+                commands:
+                - cd ${RepositoryPath}
+                - terragrunt init --terragrunt-non-interactive
+                - terragrunt plan -out $CODEBUILD_SRC_DIR/plan.json ${overrides} ${command}
+                - 'export PLAN_LOGS=$(terragrunt show $CODEBUILD_SRC_DIR/plan.json -no-color | grep "Plan: ")'
+                - echo "$PLAN_LOGS"
+            artifacts:
+              discard-paths: yes
+              files:
+                - $CODEBUILD_SRC_DIR/plan.json
+            env:
+              exported-variables:
+                - PLAN_LOGS
+                - CODEBUILD_BUILD_ID
+              shell: bash
+          - overrides: !If 
+              - OverrideDefaults
+              - !Sub -var 'region=${AWS::Region}' -var 'environment=${Environment}'
+              - ''
+            command: !If 
+              - DestroyResources
+              - -destroy
+              - ''
       Environment:
         ComputeType: BUILD_GENERAL1_SMALL
         Type: LINUX_CONTAINER
@@ -204,20 +223,25 @@ Resources:
         Type: CODEPIPELINE
       Source:
         Type: CODEPIPELINE
-        BuildSpec: !Sub |
-          version: 0.2
-          phases:
-            install:
-              runtime-versions:
-                golang: 1.14
-              commands:
-                - wget -O terraform.zip https://releases.hashicorp.com/terraform/0.14.3/terraform_0.14.3_linux_amd64.zip && unzip terraform.zip && mv terraform /bin && rm terraform.zip
-                - wget -O /bin/terragrunt https://github.com/gruntwork-io/terragrunt/releases/download/v0.26.4/terragrunt_linux_amd64 && chmod +x /bin/terragrunt
-            build:
-              commands:
-              - cd ${RepositoryPath}
-              - terragrunt init --terragrunt-non-interactive
-              - terragrunt apply $CODEBUILD_SRC_DIR_PlanArtifact/plan.json
+        BuildSpec: !Sub
+          - |
+            version: 0.2
+            phases:
+              install:
+                runtime-versions:
+                  golang: 1.14
+                commands:
+                  - wget -O terraform.zip https://releases.hashicorp.com/terraform/0.14.4/terraform_0.14.4_linux_amd64.zip && unzip terraform.zip && mv terraform /bin && rm terraform.zip
+                  - wget -O /bin/terragrunt https://github.com/gruntwork-io/terragrunt/releases/download/v0.26.4/terragrunt_linux_amd64 && chmod +x /bin/terragrunt
+              build:
+                commands:
+                - cd ${RepositoryPath}
+                - terragrunt init --terragrunt-non-interactive
+                - terragrunt ${command}
+          - command: !If
+              - DestroyResources
+              - destroy -auto-approve
+              - apply $CODEBUILD_SRC_DIR_PlanArtifact/plan.json
       Environment:
         ComputeType: BUILD_GENERAL1_SMALL
         Type: LINUX_CONTAINER
@@ -252,10 +276,10 @@ Resources:
           Namespace: SourceVariables
           InputArtifacts: []
           ActionTypeId:
-            Version: 1
+            Version: !ImportValue cloudprem-source-action-version
             Category: Source
             Owner: Custom
-            Provider: CustomWebhookSourceAction
+            Provider: !ImportValue cloudprem-source-action-provider
           Configuration:
             GitUrl: !Ref RepositoryUrl
             Branch: !Ref RepositoryBranch
@@ -315,21 +339,25 @@ Resources:
     - TfPlanCodeBuildProject
     - TfApplyCodeBuildProject
 
-# Outputs:
+Outputs:
 
-#   LicenseParameterName:
-#     Description: Name of the Dozuki license Parameter Store parameter
-#     Value: !Ref DozukiLicenseParameter
+  LicenseParameterName:
+    Description: Name of the Dozuki license Parameter Store parameter
+    Value: !Ref DozukiLicenseParameter
 
-#   PlanCodeBuildProject:
-#     Description: Name of the Terraform plan CodeBuild project
-#     Value: !Ref TfPlanCodeBuildProject
+  PlanCodeBuildProject:
+    Description: Name of the Terraform plan CodeBuild project
+    Value: !Ref TfPlanCodeBuildProject
 
-#   ApplyCodeBuildProject:
-#     Description: Name of the Terraform apply CodeBuild project
-#     Value: !Ref TfApplyCodeBuildProject
+  ApplyCodeBuildProject:
+    Description: Name of the Terraform apply CodeBuild project
+    Value: !Ref TfApplyCodeBuildProject
 
-#   Pipeline:
-#     Description: CodePipeline pipeline name
-#     Value: !Ref ProjectPipeline
+  Pipeline:
+    Description: CodePipeline pipeline name
+    Value: !Ref ProjectPipeline
+
+  PipelineAction:
+    Description: Terraform action that this pipeline executes
+    Value: !Ref PipelineAction
   
