@@ -36,16 +36,21 @@ Parameters:
     Default: development
     Description: Path inside the git repository that contains the Cloudprem parameters for this environment. Don't use the same path for multiple pipelines
 
-  OverrideDefaults:
+  OverrideRepositoryParameters:
     Type: String
     Default: true
-    Description: Override 'Region' and 'Environment' parameters from the repository with the current template parameters
+    Description: Override 'identifier', 'region' and 'environment' parameters from the repository with the current template parameters
 
   PipelineAction:
     Type: String
     Default: Apply
     AllowedValues: [ Apply, Destroy ]
     Description: Action that the pipeline will execute. Apply will create or update the resources and destroy will delete the Terraform stack
+
+  Identifier:
+    Type: String
+    Default: ""
+    Description: A name identifier to add as prefix to resources names
 
   OwnerName:
     Type: String
@@ -59,7 +64,9 @@ Parameters:
 
 Conditions:
 
-  OverrideDefaults: !Equals [ !Ref OverrideDefaults, true ]
+  IdentifierSet: !Not [ !Equals [ !Ref Identifier, "" ] ]
+
+  OverrideRepositoryParameters: !Equals [ !Ref OverrideRepositoryParameters, true ]
 
   DestroyResources: !Equals [ !Ref PipelineAction, 'Destroy' ]
 
@@ -68,7 +75,10 @@ Resources:
   DozukiLicenseParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: !Sub /cloudprem/${Environment}/license
+      Name: !If
+        - IdentifierSet
+        - !Sub /${Identifier}/cloudprem/${Environment}/license
+        - !Sub /cloudprem/${Environment}/license
       Description: The contents of the Dozuki license file provided to you.
       Type: String
       Value: !Ref DozukiLicense
@@ -78,7 +88,10 @@ Resources:
   CodeBuildServiceRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub cloudprem-${Environment}-${AWS::Region}-codebuild
+      RoleName: !If
+        - IdentifierSet
+        - !Sub ${Identifier}-cloudprem-${Environment}-${AWS::Region}-codebuild
+        - !Sub cloudprem-${Environment}-${AWS::Region}-codebuild
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -87,7 +100,10 @@ Resources:
             Service: codebuild.amazonaws.com
           Action: sts:AssumeRole
       Policies:
-      - PolicyName: !Sub cloudprem-${Environment}-${AWS::Region}-codebuild
+      - PolicyName: !If
+        - IdentifierSet
+        - !Sub ${Identifier}-cloudprem-${Environment}-${AWS::Region}-codebuild
+        - !Sub cloudprem-${Environment}-${AWS::Region}-codebuild
         PolicyDocument:
           Statement:
           - Effect: Allow
@@ -108,7 +124,10 @@ Resources:
   CodePipelineServiceRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub cloudprem-${Environment}-${AWS::Region}-codepipeline
+      RoleName: !If
+        - IdentifierSet
+        - !Sub ${Identifier}-cloudprem-${Environment}-${AWS::Region}-codepipeline
+        - !Sub cloudprem-${Environment}-${AWS::Region}-codepipeline
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -118,7 +137,10 @@ Resources:
             - codepipeline.amazonaws.com
           Action: sts:AssumeRole
       Policies:
-      - PolicyName: !Sub cloudprem-${Environment}-${AWS::Region}-codepipeline
+      - PolicyName: !If
+        - IdentifierSet
+        - !Sub ${Identifier}-cloudprem-${Environment}-${AWS::Region}-codepipeline
+        - !Sub cloudprem-${Environment}-${AWS::Region}-codepipeline
         PolicyDocument:
           Version: 2012-10-17
           Statement:
@@ -150,7 +172,10 @@ Resources:
   TfPlanCodeBuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
-      Name: !Sub cloudprem-${Environment}-terraform-plan
+      Name: !If
+        - IdentifierSet
+        - !Sub ${Identifier}-cloudprem-${Environment}-terraform-plan
+        - !Sub cloudprem-${Environment}-terraform-plan
       Description: !Sub Build project for cloudprem-${Environment} Terraform plan
       ServiceRole: !GetAtt CodeBuildServiceRole.Arn
       Artifacts:
@@ -184,8 +209,8 @@ Resources:
                 - CODEBUILD_BUILD_ID
               shell: bash
           - overrides: !If 
-              - OverrideDefaults
-              - !Sub -var 'region=${AWS::Region}' -var 'environment=${Environment}'
+              - OverrideRepositoryParameters
+              - !Sub -var 'identifier=${Identifier}' -var 'region=${AWS::Region}' -var 'environment=${Environment}'
               - ''
             command: !If 
               - DestroyResources
@@ -207,7 +232,10 @@ Resources:
       TimeoutInMinutes: 35
       Tags:
       - Key: Name
-        Value: !Sub cloudprem-${Environment}-terraform-plan
+        Value: !If
+        - IdentifierSet
+        - !Sub ${Identifier}-cloudprem-${Environment}-terraform-plan
+        - !Sub cloudprem-${Environment}-terraform-plan
       - Key: Owner
         Value: !Ref OwnerName
       - Key: Environment
@@ -216,7 +244,10 @@ Resources:
   TfApplyCodeBuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
-      Name: !Sub cloudprem-${Environment}-terraform-apply
+      Name: !If
+        - IdentifierSet
+        - !Sub ${Identifier}-cloudprem-${Environment}-terraform-apply
+        - !Sub cloudprem-${Environment}-terraform-apply
       Description: !Sub Build project for cloudprem-${Environment} Terraform apply
       ServiceRole: !GetAtt CodeBuildServiceRole.Arn
       Artifacts:
@@ -256,7 +287,10 @@ Resources:
       TimeoutInMinutes: 35
       Tags:
       - Key: Name
-        Value: !Sub cloudprem-${Environment}-terraform-apply
+        Value: !If
+        - IdentifierSet
+        - !Sub ${Identifier}-cloudprem-${Environment}-terraform-apply
+        - !Sub cloudprem-${Environment}-terraform-apply
       - Key: Owner
         Value: !Ref OwnerName
       - Key: Environment
@@ -267,7 +301,10 @@ Resources:
   ProjectPipeline:
     Type: AWS::CodePipeline::Pipeline
     Properties:
-      Name: !Sub cloudprem-${Environment}
+      Name: !If
+        - IdentifierSet
+        - !Sub ${Identifier}-cloudprem-${Environment}
+        - !Sub cloudprem-${Environment}
       RoleArn: !GetAtt CodePipelineServiceRole.Arn
       Stages:
       - Name: Checkout

@@ -33,9 +33,9 @@ The Cloudprem Pipeline stack should be deployed once per environment. It deploys
 | RepositoryUrl    | SSH/HTTP URL of the git repository containing the Cloudprem parameters                                                                     | https://github.com/nclouds/doz-infrastructure-live.git | no       |
 | RepositoryBranch | Branch that contains the Cloudprem parameters                                                                                              | main                                                   | no       |
 | RepositoryPath   | Path inside the git repository that contains the Cloudprem parameters for this environment. Don't use the same path for multiple pipelines | development                                            | no       |
-| OverrideDefaults | Override 'Region' and 'Environment' parameters from the repository with the current template parameters                                    | true                                                   | no       |
-| PipelineAction   | Action that the pipeline will execute. Apply will create or update the resources and destroy will delete the Terraform stack               | Apply                                                  | no       |
-| WebhookSecret    |                                                                                                                                            |                                                        |          |
+| OverrideRepositoryParameters | Override 'Region' and 'Environment' parameters from the repository with the current template parameters                                    | true                                                   | no       |
+| PipelineAction   | Action that the pipeline will execute. Apply will create or update the resources and destroy will delete the Terraform stack               | Apply                                                  | no       |                                                       |          |
+| Identifier       | A name identifier to add as prefix to resources names                                                                                    |  "" | no
 | OwnerName        | An arbitrary tag name for the owner of the environment pipeline                                                                            |                                                        | yes      |
 | Environment      | Environment name to append to resources names and tags                                                                                     | dev                                                    | no       |
 
@@ -52,4 +52,4 @@ For private repositories you must use the **ssh** URL of the git repository. The
 1. Go to the *Cloudprem CodePipeline* Stack that you previously deployed and in the outputs tab, copy the public ssh key.
 2. Go to your user settings and choose SSH and GPG Keys. Add a new SSH key with the PublicSSHKey value from AWS CloudFormation.
 
-*(Notes: If you are not using the 'OverrideDefaults' setting Make sure to use the same environment name on the CloudFormation template and the Terraform parameters. The cloudformation template creates an SSM parameter with a specific name that must be used by Terraform so make sure you set the value correctly)*
+*(Notes: If you are not using the 'OverrideRepositoryParameters' setting Make sure to use the same environment name on the CloudFormation template and the Terraform parameters. The cloudformation template creates an SSM parameter with a specific name that must be used by Terraform so make sure you set the value correctly)*
