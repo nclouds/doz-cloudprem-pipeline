@@ -24,7 +24,7 @@ Metadata:
     LicenseUrl: LICENSE
     Labels: ['codepipeline']
     HomePageUrl: https://github.com/nclouds/doz-cloudprem-pipeline
-    SemanticVersion: 1.0.3 # TODO Reset to 1.0.0
+    SemanticVersion: 1.0.4 # TODO Reset to 1.0.0
     SourceCodeUrl: https://github.com/nclouds/doz-cloudprem-pipeline
 
 Parameters:
