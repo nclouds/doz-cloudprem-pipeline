@@ -102,7 +102,7 @@ Resources:
           Effect: Allow
           Principal:
             AWS:
-            - !Sub arn:aws:iam::${AWS::AccountId}:root
+            - !Sub arn:${AWS:Partition}:iam::${AWS::AccountId}:root
           Action:
           - kms:*
           Resource: '*'
@@ -110,7 +110,7 @@ Resources:
           Effect: Allow
           Principal:
             AWS:
-            - !Sub arn:aws:iam::${AWS::AccountId}:root
+            - !Sub arn:${AWS:Partition}:iam::${AWS::AccountId}:root
           Action:
           - kms:Encrypt
           - kms:Decrypt
