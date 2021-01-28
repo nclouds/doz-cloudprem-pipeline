@@ -37,7 +37,7 @@ Mappings:
     aws:
       ServerlessRepoArn: arn:aws:serverlessrepo:us-west-2:695292474035:applications/dozuki-codepipeline
     aws-us-gov:
-      ServerlessRepoArn: arn:aws-us-gov:serverlessrepo:aws-us-gov-west-1:446787640263:applications/dozuki-codepipeline
+      ServerlessRepoArn: arn:aws-us-gov:serverlessrepo:us-gov-west-1:446787640263:applications/dozuki-codepipeline
 
 Resources:
 
