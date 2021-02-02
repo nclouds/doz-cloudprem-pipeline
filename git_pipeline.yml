@@ -280,11 +280,15 @@ Resources:
                 commands:
                 - cd ${RepositoryPath}
                 - terragrunt init --terragrunt-non-interactive
-                - terragrunt ${command}
+                - terragrunt ${command} ${overrides}
           - command: !If
               - DestroyResources
               - destroy -auto-approve
               - apply $CODEBUILD_SRC_DIR_PlanArtifact/plan.json
+            overrides: !If 
+              - OverrideRepositoryParameters
+              - !Sub -var 'identifier=${Identifier}' -var 'region=${AWS::Region}' -var 'environment=${Environment}'
+              - ''
       Environment:
         ComputeType: BUILD_GENERAL1_SMALL
         Type: LINUX_CONTAINER
