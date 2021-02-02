@@ -74,6 +74,14 @@ Conditions:
 
   DestroyResources: !Equals [ !Ref PipelineAction, 'Destroy' ]
 
+Mappings:
+
+  PartitionMap: 
+    aws:
+      ConsoleUrl: console.aws.amazon.com
+    aws-us-gov:
+      ConsoleUrl: console.amazonaws-us-gov.com
+
 Resources:
 
   DozukiLicenseParameter:
@@ -354,7 +362,9 @@ Resources:
           Configuration:
             CustomData: !Sub |
               #{BuildVariables.PLAN_LOGS}
-            ExternalEntityLink: !Sub https://${AWS::Region}.console.aws.amazon.com/codesuite/codebuild/${AWS::AccountId}/projects/${TfPlanCodeBuildProject}/build/#{BuildVariables.CODEBUILD_BUILD_ID}
+            ExternalEntityLink: !Sub 
+            - https://console.aws.amazon.com/codesuite/codebuild/${AWS::AccountId}/projects/${TfPlanCodeBuildProject}/build/#{BuildVariables.CODEBUILD_BUILD_ID}/?region=${AWS::Region}
+            - ConsoleUrl: !FindInMap [ PartitionMap, !Ref "AWS::Partition", ConsoleUrl]
           RunOrder: 1
       - Name: Apply
         Actions:
