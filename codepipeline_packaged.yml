@@ -94,7 +94,7 @@ Resources:
           Effect: Allow
           Principal:
             AWS:
-            - Fn::Sub: arn:aws:iam::${AWS::AccountId}:root
+            - Fn::Sub: arn:${AWS::Partition}:iam::${AWS::AccountId}:root
           Action:
           - kms:*
           Resource: '*'
@@ -102,7 +102,7 @@ Resources:
           Effect: Allow
           Principal:
             AWS:
-            - Fn::Sub: arn:aws:iam::${AWS::AccountId}:root
+            - Fn::Sub: arn:${AWS::Partition}:iam::${AWS::AccountId}:root
           Action:
           - kms:Encrypt
           - kms:Decrypt
@@ -117,7 +117,7 @@ Resources:
         Fn::Sub: create-ssh-key
       Description: Creates SSH keys encrypted with KMS and stores them on S3
       Handler: lambda_function.lambda_handler
-      CodeUri: s3://nclouds-cloudprem-assets/6e346878d6f6739b42458a4c5cf131bf
+      CodeUri: s3://nclouds-cloudprem-assets/8c88a1cf85e00280422b91015deaf65b
       Policies:
       - KMSEncryptPolicy:
           KeyId:
