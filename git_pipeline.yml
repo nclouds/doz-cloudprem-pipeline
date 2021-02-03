@@ -280,15 +280,14 @@ Resources:
                 commands:
                 - cd ${RepositoryPath}
                 - terragrunt init --terragrunt-non-interactive
-                - terragrunt ${command} ${overrides}
+                - terragrunt ${command}
           - command: !If
               - DestroyResources
-              - destroy -auto-approve
+              - !If
+                - OverrideRepositoryParameters
+                - !Sub destroy -auto-approve -var 'identifier=${Identifier}' -var 'region=${AWS::Region}' -var 'environment=${Environment}'
+                - destroy -auto-approve
               - apply $CODEBUILD_SRC_DIR_PlanArtifact/plan.json
-            overrides: !If 
-              - OverrideRepositoryParameters
-              - !Sub -var 'identifier=${Identifier}' -var 'region=${AWS::Region}' -var 'environment=${Environment}'
-              - ''
       Environment:
         ComputeType: BUILD_GENERAL1_SMALL
         Type: LINUX_CONTAINER
@@ -370,9 +369,9 @@ Resources:
             - https://console.aws.amazon.com/codesuite/codebuild/${AWS::AccountId}/projects/${TfPlanCodeBuildProject}/build/#{BuildVariables.CODEBUILD_BUILD_ID}/?region=${AWS::Region}
             - ConsoleUrl: !FindInMap [ PartitionMap, !Ref "AWS::Partition", ConsoleUrl]
           RunOrder: 1
-      - Name: Apply
+      - Name: !If [ DestroyResources, Destroy, Apply]
         Actions:
-        - Name: Apply
+        - Name: !If [ DestroyResources, Destroy, Apply]
           InputArtifacts:
             - Name: SourceCodeArtifact
             - Name: PlanArtifact
