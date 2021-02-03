@@ -8,7 +8,7 @@ The pipelines infrastructure is defined across two CloudFormation templates:
 
 ### Cloudprem Codepipeline 
 
-[![launch_stack](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=cloudprem-codepipeline&templateURL=https://s3.amazonaws.com/nclouds-cloudprem-assets/codepipeline_app.yml)
+[![launch_stack](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=cloudprem-codepipeline&templateURL=https://s3.us-west-2.amazonaws.com/nclouds-cloudprem-assets/codepipeline_app.yml)
 
 The Cloudprem CodePipeline stack should be deployed once in every region you intend to deploy the CloudPrem infrastructure. This stack will create a Serverless Application which in turn creates an S3 artifacts bucket for CodePipeline as well as a custom source action to pull the source code from any git repository. The stack creates some stack exports that will be used by the Cloudprem pipelines.
 
@@ -21,7 +21,7 @@ The Cloudprem CodePipeline stack should be deployed once in every region you int
 
 ### Cloudprem Pipeline 
 
-[![launch_stack](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=cloudprem-pipeline-dev&templateURL=https://s3.amazonaws.com/nclouds-cloudprem-assets/git_pipeline.yml)
+[![launch_stack](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=cloudprem-pipeline-dev&templateURL=https://s3.us-west-2.amazonaws.com/nclouds-cloudprem-assets/git_pipeline.yml)
 
 The Cloudprem Pipeline stack should be deployed once per environment. It deploys the actual pipeline as well as the CodeBuild projects for the pipeline execution.
 
