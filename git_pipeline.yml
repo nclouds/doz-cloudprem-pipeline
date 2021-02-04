@@ -316,14 +316,14 @@ Resources:
                 commands:
                 - cd ${RepositoryPath}
                 - terragrunt init --terragrunt-non-interactive
-                - terragrunt ${command}
+                - ${command}
           - command: !If
               - DestroyResources
-              - !If
+              - !If # We are using refresh before the destroy due to Terraform 0.14 bug https://github.com/terraform-aws-modules/terraform-aws-eks/issues/1162
                 - OverrideRepositoryParameters
-                - !Sub destroy -auto-approve -var 'identifier=${Identifier}' -var 'region=${AWS::Region}' -var 'environment=${Environment}'
-                - destroy -auto-approve
-              - apply $CODEBUILD_SRC_DIR_PlanArtifact/plan.json
+                - !Sub terragrunt refresh -var 'identifier=${Identifier}' -var 'region=${AWS::Region}' -var 'environment=${Environment}' && terragrunt destroy -auto-approve -var 'identifier=${Identifier}' -var 'region=${AWS::Region}' -var 'environment=${Environment}'
+                - terragrunt refresh && terragrunt destroy -auto-approve
+              - terragrunt apply $CODEBUILD_SRC_DIR_PlanArtifact/plan.json
       Environment:
         ComputeType: BUILD_GENERAL1_SMALL
         Type: LINUX_CONTAINER
