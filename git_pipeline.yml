@@ -50,8 +50,9 @@ Parameters:
   Identifier:
     Type: String
     Default: ""
+    AllowedPattern: ^[a-z0-9]*$
     MaxLength: 10
-    ConstraintDescription: Must be no longer than 10 alpha-numeric characters.
+    ConstraintDescription: Must be no longer than 10 alpha-numeric characters and must be lowercase.
     Description: A name identifier to add as prefix to resources names
 
   OwnerName:
@@ -61,8 +62,9 @@ Parameters:
   Environment:
     Type: String
     Default: dev
+    AllowedPattern: ^[a-z0-9]*$
     MaxLength: 5
-    ConstraintDescription: Must be no longer than 5 alpha-numeric characters.
+    ConstraintDescription: Must be no longer than 5 alpha-numeric characters and must be lowercase.
     Description: >-
       Environment name to append to resources names and tags.
 
